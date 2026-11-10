@@ -1,6 +1,6 @@
 # customer-intelligence: agent notes
 
-Đây là dự án phủ phần Recommendation và Segmentation trong JD (gợi ý, phân khúc, churn, LTV). Đã git init, commit local (chưa có remote). Kết quả và cách chạy xem `README.md`.
+Đây là dự án phủ phần Recommendation và Segmentation trong JD (gợi ý, phân khúc, churn, LTV). Public tại github.com/luongducthangDS/customer-intelligence (push 10/11, CI pass). Kết quả và cách chạy xem `README.md`.
 
 ## 2026-11-09: dựng end to end
 

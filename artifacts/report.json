@@ -1,0 +1,133 @@
+{
+  "cutoffs": {
+    "train": [
+      "2010-06-18",
+      "2010-09-16",
+      "2010-12-15",
+      "2011-03-15",
+      "2011-06-13"
+    ],
+    "test": "2011-09-11",
+    "end": "2011-12-10"
+  },
+  "churn": {
+    "train_rows": 19060,
+    "test_rows": 4302,
+    "base_rate": 0.4921,
+    "lgbm": {
+      "auc": 0.7642,
+      "pr_auc": 0.7129,
+      "lift_top10": 1.546
+    },
+    "logreg": {
+      "auc": 0.7685,
+      "pr_auc": 0.7055,
+      "lift_top10": 1.504
+    },
+    "recency_rule": {
+      "auc": 0.7074,
+      "pr_auc": 0.6588,
+      "lift_top10": 1.465
+    }
+  },
+  "ltv": {
+    "lgbm_tweedie": {
+      "mae": 495.9,
+      "spearman": 0.5477,
+      "top10_revenue_share": 0.5485
+    },
+    "avg_90d_spend": {
+      "mae": 491.8,
+      "spearman": 0.5374,
+      "top10_revenue_share": 0.5453
+    },
+    "oracle_top10_share": 0.7038
+  },
+  "segments": {
+    "k": 4,
+    "silhouette": 0.3596,
+    "profile": [
+      {
+        "segment": 0,
+        "n": 637,
+        "recency": 17.0,
+        "freq_365": 11.0,
+        "mon_365": 3972.19,
+        "churn_next90": 0.09,
+        "ltv_next90": 2705.55
+      },
+      {
+        "segment": 1,
+        "n": 603,
+        "recency": 19.0,
+        "freq_365": 2.0,
+        "mon_365": 657.07,
+        "churn_next90": 0.43,
+        "ltv_next90": 421.49
+      },
+      {
+        "segment": 2,
+        "n": 1307,
+        "recency": 109.0,
+        "freq_365": 3.0,
+        "mon_365": 1093.65,
+        "churn_next90": 0.42,
+        "ltv_next90": 435.36
+      },
+      {
+        "segment": 3,
+        "n": 1755,
+        "recency": 277.0,
+        "freq_365": 1.0,
+        "mon_365": 281.76,
+        "churn_next90": 0.72,
+        "ltv_next90": 229.22
+      }
+    ]
+  },
+  "recs": {
+    "ease_lambda_ndcg_val": {
+      "50": 0.2733,
+      "200": 0.2841,
+      "500": 0.2872,
+      "1000": 0.2871,
+      "2000": 0.2829
+    },
+    "lambda": 500,
+    "items": 3979,
+    "candidate_recall": 0.4543,
+    "popular": {
+      "recall": 0.0352,
+      "ndcg": 0.1044,
+      "hit_rate": 0.5245,
+      "recall_repeat": 0.0671,
+      "recall_new": 0.0176,
+      "users": 2286
+    },
+    "buy_again": {
+      "recall": 0.1341,
+      "ndcg": 0.3359,
+      "hit_rate": 0.7848,
+      "recall_repeat": 0.3456,
+      "recall_new": 0.0003,
+      "users": 2286
+    },
+    "ease": {
+      "recall": 0.0966,
+      "ndcg": 0.2647,
+      "hit_rate": 0.7279,
+      "recall_repeat": 0.2248,
+      "recall_new": 0.0144,
+      "users": 2286
+    },
+    "ranker": {
+      "recall": 0.1464,
+      "ndcg": 0.3666,
+      "hit_rate": 0.8237,
+      "recall_repeat": 0.382,
+      "recall_new": 0.0057,
+      "users": 2286
+    }
+  },
+  "seconds": 591.8
+}

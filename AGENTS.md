@@ -1,29 +1,15 @@
 # customer-intelligence: agent notes
 
-Đây là dự án phủ phần Recommendation và Segmentation trong JD (gợi ý, phân khúc, churn, LTV). Public tại github.com/luongducthangDS/customer-intelligence (push 10/11, CI pass). Kết quả và cách chạy xem `README.md`.
+Dự án phủ phần Recommendation và Segmentation trong JD (gợi ý, phân khúc, churn, LTV). Public tại github.com/luongducthangDS/customer-intelligence, CI pass.
 
-## 2026-11-09: dựng end to end
+Đọc trước khi làm: [docs/RULES.md](docs/RULES.md) > [docs/PRD.md](docs/PRD.md) > [ARCHITECTURE](docs/ARCHITECTURE.md), [DESIGN](docs/DESIGN.md), [TASKS](docs/TASKS.md), [PROGRESS](docs/PROGRESS.md).
 
-- **Dữ liệu:** UCI Online Retail II, mirror HF `attik/Online-Retail-II-UCI`. `ci/data.py` tải và làm sạch vào `data/clean.parquet`; `data/` nằm trong gitignore.
-- **Pipeline:**
-  - `ci/customer.py`: đặc trưng tại mốc cắt, nhãn churn/LTV 90 ngày, KMeans RFM
-  - `ci/recs.py`: EASE, buy-again, candidate, LambdaRank, metric
-  - `ci/train.py`: backtest, fit lại để serving, ghi `artifacts/`
-  - `ci/api.py`: FastAPI
-- **Kết quả test** (cắt ngày 2011-09-11):
-  - churn: LightGBM AUC 0,764, logistic regression 0,769, luật recency 0,707
-  - LTV: LightGBM ngang baseline
-  - gợi ý: ranker NDCG@10 0,367, buy-again 0,336, EASE 0,265, phổ biến 0,104
-- **Đã kiểm:** `pytest` 5 passed (khoảng 45 s); API chạy trên artifact thật bằng TestClient; `docker build` rồi `docker run` thành công, `/health` và `/recommend` trả kết quả đúng.
+## Trạng thái (2026-11-11)
+- Xong end to end 09–10/11: ranker NDCG@10 0,367 so với buy-again 0,336; churn AUC 0,764–0,769; LTV ngang baseline. Chi tiết ở `docs/PROGRESS.md`.
+- Việc tiếp theo: mục đầu tiên chưa tick trong `docs/TASKS.md`.
+- `python -m ci.data` tải dữ liệu, `python -m ci.train` (~10 phút) ghi `artifacts/` trước khi chạy API.
 
 ## Gotchas
-
-- Dùng `.venv` riêng của thư mục này (uv, Python 3.11). Lệnh `python` mặc định của shell trỏ vào venv của DocuMindAI.
-- Khi máy đang có job nặng khác chạy (ví dụ PhoBERT của `vietnamese-nlp`), LightGBM chạy nhiều luồng bị oversubscription và chậm gấp 3–4 lần. Vì vậy mô hình đang để `n_jobs=1`.
-- `overdue = recency / (ipt_mean + 1)`. Phải giữ `+1` vì các hoá đơn mua cùng ngày cho `ipt_mean = 0`, chia ra inf và làm logistic regression lỗi.
-- Bản serving fit lại phân khúc trên snapshot cuối và silhouette chọn k = 3, khác k = 4 ở bản backtest.
-
-## Còn lại
-
-- Candidate recall mới 45 %; nên thêm nguồn candidate theo đồng mua và theo danh mục.
-- Chưa có monitoring hay MLflow cho dự án này.
+- Dùng `.venv` riêng (uv, Python 3.11); `python` mặc định của shell trỏ vào venv DocuMindAI.
+- Job nặng khác đang chạy (PhoBERT…) làm LightGBM chậm 3–4 lần; vì vậy để `n_jobs=1`.
+- Serving fit lại phân khúc trên snapshot cuối, silhouette chọn k = 3 (backtest là k = 4).

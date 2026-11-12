@@ -1,5 +1,6 @@
 """Leakage, label and end-to-end pipeline checks on a small synthetic shop (runs in CI, no download)."""
 import importlib
+import json
 import os
 
 import numpy as np
@@ -82,3 +83,34 @@ def test_end_to_end_train_and_api(tx, tmp_path, monkeypatch):
     assert client.get("/similar/10001").status_code == 200
     assert client.post("/score", json={"features": body["features"]}).status_code == 200
     assert client.post("/score", json={"features": {"recency": 1}}).status_code == 422
+    assert client.get(f"/recommend/{cust}?k=500").status_code == 422  # k vượt top 20 đã tính sẵn
+    m = client.get("/metrics").json()
+    assert m["model_version"] and m["latency_ms"]["GET /recommend/{customer_id}"]["n"] >= 2
+    assert client.get("/health", headers={"x-request-id": "abc"}).headers["x-request-id"] == "abc"
+
+    monkeypatch.setattr(api, "API_KEY", "k3y")
+    assert client.get("/health").status_code == 200  # health mở cho load balancer
+    assert client.get(f"/customers/{cust}").status_code == 401
+    assert client.get(f"/customers/{cust}", headers={"X-API-Key": "sai"}).status_code == 401
+    assert client.get(f"/customers/{cust}", headers={"X-API-Key": "k3y"}).status_code == 200
+
+
+def test_missing_artifacts_is_503(tmp_path, monkeypatch):
+    monkeypatch.setenv("CI_ARTIFACTS", str(tmp_path))
+    from ci import api
+    api = importlib.reload(api)
+    assert TestClient(api.app).get("/health").status_code == 503
+
+
+def test_gate():
+    from ci import gate
+    base = json.loads(gate.BASELINE.read_text())
+    rep = json.loads((gate.ROOT / "artifacts" / "report.json").read_text())
+    assert gate.check(rep, base) == []  # report đã commit phải qua gate
+    worse = json.loads(json.dumps(rep))
+    worse["recs"]["ranker"]["ndcg"] = rep["recs"]["buy_again"]["ndcg"] - 0.01
+    worse["churn"]["lgbm"]["auc"] -= 0.05
+    fails = gate.check(worse, base)
+    assert any("recs.ranker.ndcg" in f and "baseline" in f for f in fails)
+    assert any("không thắng recs.buy_again.ndcg" in f for f in fails)
+    assert any("churn.lgbm.auc" in f for f in fails)

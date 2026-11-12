@@ -1,0 +1,17 @@
+{
+  "source": "artifacts/report.json của lần train 2026-11-10 (số trong README)",
+  "metrics": {
+    "churn.lgbm.auc": 0.7642,
+    "churn.lgbm.pr_auc": 0.7129,
+    "churn.logreg.auc": 0.7685,
+    "recs.ranker.ndcg": 0.3666,
+    "recs.ranker.recall": 0.1464,
+    "ltv.lgbm_tweedie.spearman": 0.5477
+  },
+  "must_beat": [
+    ["churn.lgbm.auc", "churn.recency_rule.auc"],
+    ["churn.logreg.auc", "churn.recency_rule.auc"],
+    ["recs.ranker.ndcg", "recs.buy_again.ndcg"],
+    ["recs.ranker.ndcg", "recs.popular.ndcg"]
+  ]
+}

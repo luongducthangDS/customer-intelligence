@@ -70,14 +70,37 @@ Phân khúc 1 và 2 có tỉ lệ churn gần nhau nhưng vì lý do khác nhau,
 - **Bài học chính:** với khách sỉ, phần lớn đơn là mua lại. Baseline buy-again mạnh hơn hẳn EASE. Ranker thắng vì học được khi nào nên đẩy món cũ và khi nào nên đẩy món mới (NDCG +9 % so với buy-again). Recall món mới vẫn rất thấp. Nếu mục tiêu kinh doanh là khám phá sản phẩm thì cần một slot riêng trong danh sách gợi ý cho món mới.
 - **Cold start:** khách mới nhận danh sách phổ biến. Món quá hiếm để có trong ma trận EASE (ít hơn 5 khách) dùng hàng xóm TF-IDF trên mô tả sản phẩm (content-based).
 
+## Kiến trúc
+
+```mermaid
+flowchart LR
+  D[Online Retail II<br/>mirror HF] --> C[ci/data.py<br/>làm sạch]
+  C --> F[ci/customer.py<br/>đặc trưng RFM tại mốc cắt]
+  C --> R[ci/recs.py<br/>EASE + buy-again + phổ biến<br/>→ candidate → LambdaRank]
+  F --> M[churn LR/LightGBM<br/>LTV tweedie, KMeans]
+  M & R --> T[ci/train.py<br/>backtest + fit lại]
+  T --> A[(artifacts/<br/>models, recs top 20,<br/>report.json)]
+  A --> G{ci/gate.py<br/>so eval/baseline.json}
+  A --> API[ci/api.py FastAPI<br/>API key, log JSON, /metrics]
+```
+
+**Quyết định thiết kế**
+
+- **Backtest theo mốc cắt thời gian, không chia ngẫu nhiên:** đặc trưng chỉ dùng dữ liệu trước mốc; có test riêng kiểm tra rò rỉ tương lai.
+- **Gợi ý hai tầng (candidate rồi ranker):** EASE và buy-again mỗi cái mạnh một phần (món mới / món mua lại); LambdaRank học cách trộn. Trần của ranker là candidate recall 45 %.
+- **Gợi ý tính trước top 20 mỗi khách:** API chỉ tra cứu, không chạy model khi có request, nên latency thấp và không cần timeout cho inference.
+- **Fallback:** khách không có trong snapshot nhận danh sách phổ biến (`source: popular_cold_start`); món hiếm dùng TF-IDF mô tả thay EASE.
+- **Giữ logistic regression bên cạnh LightGBM:** hai model ngang nhau (AUC 0,769 và 0,764); LR dễ giải thích hệ số hơn.
+
 ## Chạy
 
 ```bash
 uv venv -p 3.11 .venv && uv pip install -p .venv -r requirements.txt
 .venv/Scripts/python -m ci.train          # ~10 phút trên CPU, ghi artifacts/
-.venv/Scripts/python -m pytest -q         # 5 test, dữ liệu tổng hợp, ~45 s
+.venv/Scripts/python -m pytest -q         # 7 test, dữ liệu tổng hợp, ~45 s
 .venv/Scripts/uvicorn ci.api:app --port 8000
-docker build -t customer-intelligence . && docker run -p 8000:8000 customer-intelligence
+docker build -t customer-intelligence . && docker run -p 8000:8000 -e CI_API_KEY=<key> customer-intelligence
+.venv/Scripts/python -m ci.gate          # regression gate trên artifacts/report.json
 ```
 
 | Endpoint | Trả về |
@@ -85,9 +108,18 @@ docker build -t customer-intelligence . && docker run -p 8000:8000 customer-inte
 | `GET /customers/{id}` | phân khúc, xác suất churn, LTV 90 ngày, đặc trưng |
 | `GET /recommend/{id}?k=10` | top k món từ ranker; khách mới nhận danh sách phổ biến |
 | `GET /similar/{stock_code}` | món tương tự: EASE cho món phổ biến, TF-IDF cho món hiếm |
+| `GET /metrics` | số request, latency p50/p95 theo route, version model |
 | `POST /score` | chấm churn, LTV và phân khúc cho khách mới khi đặc trưng được tính ở upstream |
 
 ## MLOps
+
+- **Regression gate** (`python -m ci.gate`, chạy trong CI): `artifacts/report.json` phải (1) không thấp hơn `eval/baseline.json` quá 0,02 ở churn AUC/PR-AUC, NDCG/Recall của ranker, Spearman LTV, và (2) thắng luật đơn giản trên cùng tập test (churn thắng luật recency, ranker thắng buy-again và phổ biến). LTV không có điều kiện "thắng baseline" vì hiện tại nó không thắng.
+- **API:**
+  - `CI_API_KEY` đặt thì mọi endpoint trừ `/health` cần header `X-API-Key`.
+  - Giới hạn input: `k` từ 1 đến 20, `/score` tối đa 64 đặc trưng, giá trị phải hữu hạn; sai thì 422.
+  - Thiếu artifact thì trả 503 kèm hướng dẫn, không 500.
+  - Mỗi request ghi một dòng log JSON: `request_id` (nhận từ header `X-Request-ID` hoặc tự sinh, trả lại trong header), route, status, latency, `model_version` (12 ký tự đầu SHA-256 của `models.joblib`). Response chấm điểm cũng trả `model_version`.
+  - `GET /metrics`: số request theo route và status, latency p50/p95 (1.000 request gần nhất mỗi route, trong bộ nhớ).
 
 - **CI** (`.github/workflows/ci.yml`): chạy toàn bộ pipeline train trên một shop tổng hợp 300 khách và kiểm tra:
   - không rò rỉ tương lai
@@ -100,5 +132,5 @@ docker build -t customer-intelligence . && docker run -p 8000:8000 customer-inte
 
 - Chưa tune siêu tham số: LightGBM dùng tham số cố định hợp lý. Cũng chưa có MLflow; dự án `demand-forecasting` đã minh hoạ MLflow.
 - Tập candidate chỉ bao 45 % món khách mua. Có thể thêm nguồn candidate theo đồng mua trong cùng hoá đơn, hoặc theo danh mục từ mô tả sản phẩm.
-- Monitoring cho phần này chưa có. Cách làm giống `fraud-graph/`: PSI của phân phối điểm theo thời gian.
+- Đã có log request và `/metrics` vận hành, nhưng chưa monitoring drift dữ liệu/điểm (PSI theo thời gian như `fraud-graph/`). Metrics nằm trong bộ nhớ một tiến trình.
 - `python -m ci.train` mất khoảng 10 phút, phần lớn nằm ở bước dựng candidate và ma trận EASE. Chưa profile kỹ.

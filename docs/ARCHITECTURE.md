@@ -9,7 +9,8 @@ ci/data.py       tải mirror HF attik/Online-Retail-II-UCI, làm sạch → dat
 ci/customer.py   đặc trưng RFM tại mốc cắt (chỉ dùng dòng date < c), nhãn churn/LTV 90 ngày, KMeans RFM
 ci/recs.py       EASE, buy-again, phổ biến, candidate, LambdaRank, metric (Recall/NDCG/HitRate@10)
 ci/train.py      backtest theo mốc cắt, chọn λ EASE, train ranker, fit lại để serving → artifacts/
-ci/api.py        FastAPI: /customers/{id}, /recommend/{id}, /similar/{stock_code}, /score, /health
+ci/api.py        FastAPI: /customers/{id}, /recommend/{id}, /similar/{stock_code}, /score, /health, /metrics; API key, log JSON
+ci/gate.py       regression gate: report.json so với eval/baseline.json + model phải thắng luật đơn giản
 tests/test_pipeline.py  shop tổng hợp 300 khách: không rò rỉ, nhãn đúng, ranker thắng phổ biến, API chạy
 ```
 

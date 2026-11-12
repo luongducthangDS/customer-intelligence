@@ -4,6 +4,7 @@
 - [x] Dữ liệu, đặc trưng tại mốc cắt, nhãn churn/LTV
 - [x] EASE, buy-again, candidate, LambdaRank, phân khúc RFM
 - [x] API, Docker, CI có quality gate, repo public
+- [x] (12/11) Chuẩn CV: regression gate `ci/gate.py` + `eval/baseline.json` trong CI; API key, giới hạn input, 503 khi thiếu artifact, log JSON + request id + model version, `/metrics`; sơ đồ Mermaid + quyết định thiết kế trong README
 
 ## Tiếp theo (lần lượt từ trên xuống)
 - [ ] Thêm nguồn candidate đồng mua trong cùng hoá đơn và theo danh mục (candidate recall đang 45 %, là trần của ranker)
